@@ -30,59 +30,42 @@ setup('authenticate', async ({ page }) => {
 
   console.log('URL:', page.url());
 
-  // Wait for email input (CONFIRMED: input[placeholder="Email ID"])
+  // Wait for email input (CONFIRMED: placeholder="Email ID")
   const emailInput = page.locator('input[placeholder="Email ID"]');
   await emailInput.waitFor({ state: 'visible', timeout: 60000 });
-  await emailInput.fill(email);
 
-  // Fill password
-  await page.fill('input[placeholder="Password"]', password);
+  // Clear and type to trigger Angular reactive form validation
+  await emailInput.click();
+  await emailInput.fill('');
+  await emailInput.type(email, { delay: 50 });  // type() triggers Angular change detection
 
-  // Log all buttons to find the correct submit button
-  const buttons = await page.evaluate(() => {
-    return [...document.querySelectorAll('button')].map(b => ({
-      type: b.type,
-      text: b.textContent?.trim()?.substring(0, 50),
-      className: b.className?.substring(0, 50),
-      disabled: b.disabled,
-    }));
+  // Fill password similarly
+  const pwdInput = page.locator('input[placeholder="Password"]');
+  await pwdInput.click();
+  await pwdInput.fill('');
+  await pwdInput.type(password, { delay: 50 });
+
+  // Wait a moment for Angular to validate the form and enable the button
+  await page.waitForTimeout(1000);
+
+  // Log button state after filling
+  const btnState = await page.evaluate(() => {
+    const btn = document.querySelector('button[type="submit"]');
+    return btn ? { disabled: (btn as HTMLButtonElement).disabled, text: btn.textContent?.trim() } : null;
   });
-  console.log('Buttons found:', JSON.stringify(buttons));
+  console.log('Button state after fill:', JSON.stringify(btnState));
 
-  // Try multiple button strategies for the login button
-  // Material Angular buttons often don't have type="submit"
-  const buttonSelectors = [
-    'button[type="submit"]',
-    'button:has-text("Login")',
-    'button:has-text("LOGIN")',
-    'button:has-text("Sign In")',
-    'button:has-text("SIGN IN")',
-    'button:has-text("Log In")',
-    'button:has-text("LOG IN")',
-    '.login-btn',
-    'form button:not([type="button"])',
-    'mat-button, button.mat-button, button.mat-raised-button',
-    'button',  // fallback: first button on page
-  ];
-
-  let clicked = false;
-  for (const sel of buttonSelectors) {
-    const count = await page.locator(sel).count();
-    console.log('Button selector', sel, '-> count:', count);
-    if (count > 0 && !clicked) {
-      try {
-        await page.locator(sel).first().click({ timeout: 5000 });
-        clicked = true;
-        console.log('Clicked via selector:', sel);
-        break;
-      } catch {
-        console.log('Click failed for:', sel);
-      }
-    }
-  }
-
-  if (!clicked) {
-    throw new Error('Could not find a clickable login button');
+  // CONFIRMED button text: "LOG IN" - use force click to bypass disabled state if needed
+  const loginBtn = page.locator('button[type="submit"]');
+  
+  try {
+    // First try normal click (button should be enabled after proper form fill)
+    await loginBtn.click({ timeout: 5000 });
+    console.log('Clicked LOG IN button normally');
+  } catch {
+    console.log('Normal click failed, trying force click...');
+    await loginBtn.click({ force: true, timeout: 5000 });
+    console.log('Force clicked LOG IN button');
   }
 
   console.log('Waiting for redirect...');

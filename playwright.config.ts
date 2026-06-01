@@ -10,7 +10,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  timeout: 60_000,
+  timeout: 90_000,              // 90s per test (auth needs up to 60s alone)
   globalTimeout: 15 * 60 * 1000,
 
   reporter: [
@@ -29,25 +29,26 @@ export default defineConfig({
       size: { width: 1920, height: 1080 },
     },
     trace: 'retain-on-failure',
-    // NOTE: storageState is set per-project below, NOT here globally
+    actionTimeout: 30_000,       // 30s for each action (click, fill etc)
+    navigationTimeout: 60_000,   // 60s for navigation
   },
 
   projects: [
-    // Auth setup — runs first, creates playwright/.auth/user.json
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
+      timeout: 120_000,          // 2 minutes for auth setup
       use: {
-        // No storageState here — this IS the step that creates it
         storageState: undefined,
+        actionTimeout: 30_000,
+        navigationTimeout: 60_000,
       },
     },
-    // All tests — depend on setup having created the auth file
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: AUTH_FILE,  // Reuse login session
+        storageState: AUTH_FILE,
       },
       dependencies: ['setup'],
     },

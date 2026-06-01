@@ -12,52 +12,81 @@ setup('authenticate', async ({ page }) => {
     throw new Error('ENVIZOM_EMAIL and ENVIZOM_PASSWORD must be set.');
   }
 
-  // Ensure auth directory exists
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
 
-  console.log('Navigating to login page...');
+  console.log('Step 1: Navigate to login page');
+  await page.goto('https://envizom.oizom.com', { waitUntil: 'networkidle', timeout: 60000 });
+  await page.waitForTimeout(3000);
 
-  // Navigate with domcontentloaded wait (faster than load for Angular SPAs)
-  await page.goto('https://envizom.oizom.com/#/login', {
-    waitUntil: 'domcontentloaded',
-    timeout: 30000,
+  // If not on login, go directly
+  if (!page.url().includes('/login')) {
+    await page.goto('https://envizom.oizom.com/#/login', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(3000);
+  }
+
+  console.log('Step 2: URL is', page.url());
+
+  // Take screenshot to see what actually loaded
+  await page.screenshot({ path: 'test-results/login-page.png' });
+
+  // Log all input elements found
+  const inputs = await page.evaluate(() => {
+    return [...document.querySelectorAll('input')].map(el => ({
+      type: el.type, id: el.id, name: el.name, placeholder: el.placeholder,
+      visible: el.offsetParent !== null
+    }));
   });
+  console.log('Inputs found:', JSON.stringify(inputs));
 
-  // Give Angular time to bootstrap (important on cold CI runners)
-  await page.waitForTimeout(5000);
+  // Try to find login form using broad selectors
+  const emailSelectors = [
+    'input[type="email"]',
+    'input[formcontrolname="email"]',
+    'input[name="email"]',
+    'input[placeholder*="email" i]',
+    'input[placeholder*="Email" i]',
+    'input[type="text"]',
+    'mat-form-field input',
+    'form input:first-of-type',
+    'input',
+  ];
 
-  console.log('Current URL:', page.url());
-  console.log('Page title:', await page.title());
+  let emailInput = null;
+  for (const sel of emailSelectors) {
+    const count = await page.locator(sel).count();
+    console.log('Selector', sel, '-> count:', count);
+    if (count > 0) {
+      emailInput = sel;
+      break;
+    }
+  }
 
-  // Wait for email input — extended timeout for CI cold start
-  console.log('Waiting for login form...');
-  await page.waitForSelector(
-    'input[type="email"], input[formcontrolname="email"], input[type="text"]',
-    { timeout: 60000, state: 'visible' }
-  );
+  if (!emailInput) {
+    await page.screenshot({ path: 'test-results/no-inputs-found.png' });
+    throw new Error('Could not find any email/text input on the login page.');
+  }
 
-  console.log('Login form found, filling credentials...');
-  await page.fill('input[type="email"], input[formcontrolname="email"]', email);
-  await page.fill('input[type="password"], input[formcontrolname="password"]', password);
+  console.log('Using selector:', emailInput);
+  await page.fill(emailInput, email);
 
-  // Take screenshot before submit for debugging
-  await page.screenshot({ path: 'test-results/login-before-submit.png' });
+  // Find password input
+  const pwdInput = page.locator('input[type="password"]').first();
+  await pwdInput.fill(password);
 
-  // Click submit
-  await page.click('button[type="submit"]');
+  await page.screenshot({ path: 'test-results/filled-form.png' });
+
+  // Submit
+  const submitBtn = page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign In"), button:has-text("Submit")').first();
+  await submitBtn.click();
+
   console.log('Submit clicked, waiting for redirect...');
-
-  // Wait for Angular router to navigate away from login
   await page.waitForFunction(() => {
     return !window.location.hash.includes('/login') && window.location.hash.length > 2;
   }, { timeout: 30000 });
 
   console.log('Login successful! URL:', page.url());
-
-  // Extra wait for Angular to fully initialize
   await page.waitForTimeout(3000);
 
-  // Save authenticated session
   await page.context().storageState({ path: AUTH_FILE });
-  console.log('Auth state saved to', AUTH_FILE);
+  console.log('Auth state saved.');
 });

@@ -5,42 +5,40 @@ import * as path from 'path';
 const AUTH_FILE = 'playwright/.auth/user.json';
 
 setup('authenticate', async ({ page }) => {
-          const email    = process.env.ENVIZOM_EMAIL    ?? '';
-          const password = process.env.ENVIZOM_PASSWORD ?? '';
+  const email    = process.env.ENVIZOM_EMAIL    ?? '';
+  const password = process.env.ENVIZOM_PASSWORD ?? '';
 
-        if (!email || !password) {
-                    throw new Error('ENVIZOM_EMAIL and ENVIZOM_PASSWORD must be set.');
-        }
+  if (!email || !password) {
+    throw new Error('ENVIZOM_EMAIL and ENVIZOM_PASSWORD must be set.');
+  }
 
-        fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
+  fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
 
-        // Navigate to the login page
-        await page.goto('https://envizom.oizom.com/#/login', {
-                    waitUntil: 'networkidle',
-                    timeout: 60000,
-        });
+  await page.goto('https://envizom.oizom.com/#/login', {
+    waitUntil: 'networkidle',
+    timeout: 60000,
+  });
 
-        // Wait for the email input to appear
-        await page.waitForSelector('input[placeholder="Email ID"]', { timeout: 30000 });
-          await page.waitForTimeout(1000);
+  await page.waitForSelector('input[placeholder="Email ID"]', { timeout: 30000 });
+  await page.waitForTimeout(2000);
 
-        // Fill in email and password
-        await page.fill('input[placeholder="Email ID"]', email);
-          await page.fill('input[placeholder="Password"]', password);
+  await page.click('input[placeholder="Email ID"]');
+  await page.keyboard.type(email, { delay: 50 });
+  await page.keyboard.press('Tab');
 
-        // CRITICAL: Check the "I accept Terms & Conditions" checkbox.
-        // Angular Material removes the button's type="submit" when button is disabled,
-        // so we use button text selector "LOG IN" instead of type="submit".
-        await page.locator('mat-checkbox').click();
-          await page.waitForTimeout(2000);
+  await page.click('input[placeholder="Password"]');
+  await page.keyboard.type(password, { delay: 50 });
+  await page.keyboard.press('Tab');
 
-        // Click the LOG IN button using text (not type="submit" which disappears when enabled)
-        await page.getByRole('button', { name: 'LOG IN' }).click({ timeout: 15000 });
+  await page.waitForTimeout(1000);
 
-        // Wait for redirect away from login page
-        await expect(page).not.toHaveURL(/login/, { timeout: 30000 });
+  await page.click('label[for="mat-mdc-checkbox-1-input"]');
+  await page.waitForTimeout(2000);
 
-        // Save the authenticated session state
-        await page.context().storageState({ path: AUTH_FILE });
-          console.log('Auth setup complete - storage state saved.');
+  await page.getByRole('button', { name: 'LOG IN' }).click({ timeout: 15000 });
+
+  await expect(page).not.toHaveURL(/login/, { timeout: 30000 });
+
+  await page.context().storageState({ path: AUTH_FILE });
+  console.log('Auth setup complete - storage state saved.');
 });

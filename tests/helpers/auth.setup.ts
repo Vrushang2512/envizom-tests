@@ -5,78 +5,57 @@ import * as path from 'path';
 const AUTH_FILE = 'playwright/.auth/user.json';
 
 setup('authenticate', async ({ page }) => {
-  const email    = process.env.ENVIZOM_EMAIL    ?? '';
-  const password = process.env.ENVIZOM_PASSWORD ?? '';
+    const email    = process.env.ENVIZOM_EMAIL    ?? '';
+    const password = process.env.ENVIZOM_PASSWORD ?? '';
 
-  if (!email || !password) {
-    throw new Error('ENVIZOM_EMAIL and ENVIZOM_PASSWORD must be set.');
-  }
+        if (!email || !password) {
+              throw new Error('ENVIZOM_EMAIL and ENVIZOM_PASSWORD must be set.');
+        }
 
-  fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
+        fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
 
-  // Navigate with networkidle to ensure Angular fully loads
-  await page.goto('https://envizom.oizom.com', {
-    waitUntil: 'networkidle',
-    timeout: 60000,
-  });
+        // Navigate to login page and wait for it to fully load
+        await page.goto('https://envizom.oizom.com/#/login', {
+              waitUntil: 'networkidle',
+              timeout: 60000,
+        });
 
-  // If not redirected to login, navigate directly
-  if (!page.url().includes('/login')) {
-    await page.goto('https://envizom.oizom.com/#/login', {
-      waitUntil: 'networkidle',
-      timeout: 30000,
-    });
-  }
+        // Wait for email input to be visible
+        await page.waitForSelector('input[placeholder="Email ID"]', { timeout: 30000 });
 
-  console.log('URL:', page.url());
+        // Fill email and password using fill() - stable with Angular reactive forms
+        await page.fill('input[placeholder="Email ID"]', email);
+    await page.fill('input[placeholder="Password"]', password);
 
-  // Wait for email input (CONFIRMED: placeholder="Email ID")
-  const emailInput = page.locator('input[placeholder="Email ID"]');
-  await emailInput.waitFor({ state: 'visible', timeout: 60000 });
+        // CHECK THE "I accept the Terms and Conditions" CHECKBOX
+        // This checkbox is REQUIRED - the LOG IN button stays disabled without it!
+        const checkbox = page.locator('input[type="checkbox"]');
+    await checkbox.waitFor({ state: 'visible', timeout: 10000 });
+    const isChecked = await checkbox.isChecked();
+    if (!isChecked) {
+          await checkbox.click();
+    }
 
-  // Clear and type to trigger Angular reactive form validation
-  await emailInput.click();
-  await emailInput.fill('');
-  await emailInput.type(email, { delay: 50 });  // type() triggers Angular change detection
+        // Wait for Angular form validation to enable the submit button
+        await page.waitForFunction(
+              () => {
+                      const btn = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+                      return btn !== null && !btn.disabled;
+              },
+          { timeout: 15000 }
+            );
 
-  // Fill password similarly
-  const pwdInput = page.locator('input[placeholder="Password"]');
-  await pwdInput.click();
-  await pwdInput.fill('');
-  await pwdInput.type(password, { delay: 50 });
+        // Click the LOG IN button
+        const loginBtn = page.locator('button[type="submit"]');
+    await loginBtn.click({ timeout: 10000 });
 
-  // Wait a moment for Angular to validate the form and enable the button
-  await page.waitForTimeout(1000);
+        // Wait for successful login - URL should leave #/login
+        await page.waitForFunction(
+              () => !window.location.hash.includes('/login'),
+          { timeout: 30000 }
+            );
 
-  // Log button state after filling
-  const btnState = await page.evaluate(() => {
-    const btn = document.querySelector('button[type="submit"]');
-    return btn ? { disabled: (btn as HTMLButtonElement).disabled, text: btn.textContent?.trim() } : null;
-  });
-  console.log('Button state after fill:', JSON.stringify(btnState));
-
-  // CONFIRMED button text: "LOG IN" - use force click to bypass disabled state if needed
-  const loginBtn = page.locator('button[type="submit"]');
-  
-  try {
-    // First try normal click (button should be enabled after proper form fill)
-    await loginBtn.click({ timeout: 5000 });
-    console.log('Clicked LOG IN button normally');
-  } catch {
-    console.log('Normal click failed, trying force click...');
-    await loginBtn.click({ force: true, timeout: 5000 });
-    console.log('Force clicked LOG IN button');
-  }
-
-  console.log('Waiting for redirect...');
-  await page.waitForFunction(
-    () => !window.location.hash.includes('/login') && window.location.hash.length > 3,
-    { timeout: 30000 }
-  );
-
-  console.log('Login successful! URL:', page.url());
-  await page.waitForTimeout(2000);
-
-  await page.context().storageState({ path: AUTH_FILE });
-  console.log('Auth state saved.');
+        // Save authenticated storage state
+        await page.context().storageState({ path: AUTH_FILE });
+    console.log('Auth setup complete - storage state saved.');
 });

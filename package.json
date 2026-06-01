@@ -1,0 +1,16 @@
+{
+  "name": "envizom-tests",
+  "version": "1.0.0",
+  "description": "Daily automated Playwright tests for Envizom platform",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "dotenv": "^16.4.5",
+    "axios": "^1.7.2",
+    "typescript": "^5.4.0"
+  }
+}

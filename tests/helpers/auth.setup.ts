@@ -1,5 +1,6 @@
-import { test as setup, expect } from '@playwright/test';
+import { test as setup } from '@playwright/test';
 import * as fs from 'fs';
+import * as path from 'path';
 
 const AUTH_FILE = 'playwright/.auth/user.json';
 
@@ -11,28 +12,34 @@ setup('authenticate', async ({ page }) => {
     throw new Error('ENVIZOM_EMAIL and ENVIZOM_PASSWORD must be set as environment variables or GitHub Secrets.');
   }
 
-  fs.mkdirSync('playwright/.auth', { recursive: true });
+  // Ensure auth directory exists
+  fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
 
+  console.log('Navigating to login page...');
   await page.goto('https://envizom.oizom.com/#/login');
-  await page.waitForSelector('input[type="email"], input[formcontrolname="email"]', { timeout: 15000 });
+
+  // Wait for the login form to appear
+  await page.waitForSelector('input[type="email"], input[formcontrolname="email"]', { timeout: 20000 });
+  console.log('Login form found, filling credentials...');
 
   await page.fill('input[type="email"], input[formcontrolname="email"]', email);
   await page.fill('input[type="password"], input[formcontrolname="password"]', password);
+
+  // Click submit
   await page.click('button[type="submit"]');
 
-  // Wait until redirected away from login
-  await page.waitForURL(/\/#\/(overview|dashboard|cluster)/, { timeout: 20000 });
+  // Wait for redirect away from login — Angular hash router: /#/overview, /#/dashboard, etc.
+  console.log('Waiting for login redirect...');
+  await page.waitForFunction(() => {
+    return !window.location.hash.includes('/login') && window.location.hash.length > 2;
+  }, { timeout: 30000 });
 
-  // Never log out - if logout dialog appears, dismiss it
-  page.on('dialog', async dialog => {
-    if (dialog.message().toLowerCase().includes('logout') || dialog.message().toLowerCase().includes('sign out')) {
-      await dialog.dismiss();
-    } else {
-      await dialog.dismiss();
-    }
-  });
+  console.log('Login successful, URL:', page.url());
 
-  // Save the authenticated storage state
+  // Extra wait for Angular to fully initialize
+  await page.waitForTimeout(2000);
+
+  // Save authenticated session
   await page.context().storageState({ path: AUTH_FILE });
   console.log('Auth state saved to', AUTH_FILE);
 });

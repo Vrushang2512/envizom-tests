@@ -14,78 +14,41 @@ setup('authenticate', async ({ page }) => {
 
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
 
-  console.log('Step 1: Navigate to login page');
-  await page.goto('https://envizom.oizom.com', { waitUntil: 'networkidle', timeout: 60000 });
-  await page.waitForTimeout(3000);
-
-  // If not on login, go directly
-  if (!page.url().includes('/login')) {
-    await page.goto('https://envizom.oizom.com/#/login', { waitUntil: 'networkidle', timeout: 30000 });
-    await page.waitForTimeout(3000);
-  }
-
-  console.log('Step 2: URL is', page.url());
-
-  // Take screenshot to see what actually loaded
-  await page.screenshot({ path: 'test-results/login-page.png' });
-
-  // Log all input elements found
-  const inputs = await page.evaluate(() => {
-    return [...document.querySelectorAll('input')].map(el => ({
-      type: el.type, id: el.id, name: el.name, placeholder: el.placeholder,
-      visible: el.offsetParent !== null
-    }));
+  // Navigate with networkidle to ensure Angular fully loads
+  await page.goto('https://envizom.oizom.com', {
+    waitUntil: 'networkidle',
+    timeout: 60000,
   });
-  console.log('Inputs found:', JSON.stringify(inputs));
 
-  // Try to find login form using broad selectors
-  const emailSelectors = [
-    'input[type="email"]',
-    'input[formcontrolname="email"]',
-    'input[name="email"]',
-    'input[placeholder*="email" i]',
-    'input[placeholder*="Email" i]',
-    'input[type="text"]',
-    'mat-form-field input',
-    'form input:first-of-type',
-    'input',
-  ];
-
-  let emailInput = null;
-  for (const sel of emailSelectors) {
-    const count = await page.locator(sel).count();
-    console.log('Selector', sel, '-> count:', count);
-    if (count > 0) {
-      emailInput = sel;
-      break;
-    }
+  // If not redirected to login, navigate directly
+  if (!page.url().includes('/login')) {
+    await page.goto('https://envizom.oizom.com/#/login', {
+      waitUntil: 'networkidle',
+      timeout: 30000,
+    });
   }
 
-  if (!emailInput) {
-    await page.screenshot({ path: 'test-results/no-inputs-found.png' });
-    throw new Error('Could not find any email/text input on the login page.');
-  }
+  console.log('URL:', page.url());
 
-  console.log('Using selector:', emailInput);
-  await page.fill(emailInput, email);
+  // CONFIRMED from CI: email field is input[placeholder="Email ID"] (type=text, not email)
+  // Wait for it to be visible
+  const emailInput = page.locator('input[placeholder="Email ID"]');
+  await emailInput.waitFor({ state: 'visible', timeout: 60000 });
 
-  // Find password input
-  const pwdInput = page.locator('input[type="password"]').first();
-  await pwdInput.fill(password);
+  await emailInput.fill(email);
+  await page.fill('input[placeholder="Password"], input[type="password"]', password);
 
-  await page.screenshot({ path: 'test-results/filled-form.png' });
+  await page.click('button[type="submit"]');
+  console.log('Clicked submit, waiting for redirect...');
 
-  // Submit
-  const submitBtn = page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign In"), button:has-text("Submit")').first();
-  await submitBtn.click();
+  // Wait until URL changes away from /login
+  await page.waitForFunction(
+    () => !window.location.hash.includes('/login') && window.location.hash.length > 3,
+    { timeout: 30000 }
+  );
 
-  console.log('Submit clicked, waiting for redirect...');
-  await page.waitForFunction(() => {
-    return !window.location.hash.includes('/login') && window.location.hash.length > 2;
-  }, { timeout: 30000 });
-
-  console.log('Login successful! URL:', page.url());
-  await page.waitForTimeout(3000);
+  console.log('Logged in! URL:', page.url());
+  await page.waitForTimeout(2000);
 
   await page.context().storageState({ path: AUTH_FILE });
   console.log('Auth state saved.');

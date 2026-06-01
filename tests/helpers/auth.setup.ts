@@ -30,24 +30,68 @@ setup('authenticate', async ({ page }) => {
 
   console.log('URL:', page.url());
 
-  // CONFIRMED from CI: email field is input[placeholder="Email ID"] (type=text, not email)
-  // Wait for it to be visible
+  // Wait for email input (CONFIRMED: input[placeholder="Email ID"])
   const emailInput = page.locator('input[placeholder="Email ID"]');
   await emailInput.waitFor({ state: 'visible', timeout: 60000 });
-
   await emailInput.fill(email);
-  await page.fill('input[placeholder="Password"], input[type="password"]', password);
 
-  await page.click('button[type="submit"]');
-  console.log('Clicked submit, waiting for redirect...');
+  // Fill password
+  await page.fill('input[placeholder="Password"]', password);
 
-  // Wait until URL changes away from /login
+  // Log all buttons to find the correct submit button
+  const buttons = await page.evaluate(() => {
+    return [...document.querySelectorAll('button')].map(b => ({
+      type: b.type,
+      text: b.textContent?.trim()?.substring(0, 50),
+      className: b.className?.substring(0, 50),
+      disabled: b.disabled,
+    }));
+  });
+  console.log('Buttons found:', JSON.stringify(buttons));
+
+  // Try multiple button strategies for the login button
+  // Material Angular buttons often don't have type="submit"
+  const buttonSelectors = [
+    'button[type="submit"]',
+    'button:has-text("Login")',
+    'button:has-text("LOGIN")',
+    'button:has-text("Sign In")',
+    'button:has-text("SIGN IN")',
+    'button:has-text("Log In")',
+    'button:has-text("LOG IN")',
+    '.login-btn',
+    'form button:not([type="button"])',
+    'mat-button, button.mat-button, button.mat-raised-button',
+    'button',  // fallback: first button on page
+  ];
+
+  let clicked = false;
+  for (const sel of buttonSelectors) {
+    const count = await page.locator(sel).count();
+    console.log('Button selector', sel, '-> count:', count);
+    if (count > 0 && !clicked) {
+      try {
+        await page.locator(sel).first().click({ timeout: 5000 });
+        clicked = true;
+        console.log('Clicked via selector:', sel);
+        break;
+      } catch {
+        console.log('Click failed for:', sel);
+      }
+    }
+  }
+
+  if (!clicked) {
+    throw new Error('Could not find a clickable login button');
+  }
+
+  console.log('Waiting for redirect...');
   await page.waitForFunction(
     () => !window.location.hash.includes('/login') && window.location.hash.length > 3,
     { timeout: 30000 }
   );
 
-  console.log('Logged in! URL:', page.url());
+  console.log('Login successful! URL:', page.url());
   await page.waitForTimeout(2000);
 
   await page.context().storageState({ path: AUTH_FILE });

@@ -22,7 +22,7 @@ setup('authenticate', async ({ page }) => {
   await page.waitForSelector('input[placeholder="Email ID"]', { timeout: 30000 });
   await page.waitForTimeout(2000);
 
-  // Type credentials with keyboard events to trigger Angular reactive form validation
+  // Type credentials with keyboard to trigger Angular reactive form validation
   await page.click('input[placeholder="Email ID"]');
   await page.keyboard.type(email, { delay: 50 });
   await page.keyboard.press('Tab');
@@ -33,23 +33,32 @@ setup('authenticate', async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  // Click the mat-checkbox touch target (Angular Material's designated click area)
-  await page.locator('.mat-mdc-checkbox-touch-target').click();
+  // Check the T&C checkbox using JavaScript evaluate
+  // (Direct DOM click bypasses Angular Material's intercept issue)
+  await page.evaluate(() => {
+    const checkbox = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    if (checkbox && !checkbox.checked) {
+      checkbox.click();
+    }
+  });
   await page.waitForTimeout(2000);
 
-  // Verify button is enabled before clicking
-  const btnEnabled = await page.evaluate(() => {
+  // Check button state
+  const btnState = await page.evaluate(() => {
     const btn = document.querySelector('button');
     return btn ? { disabled: btn.disabled, text: btn.textContent?.trim() } : null;
   });
-  console.log('Button state:', JSON.stringify(btnEnabled));
+  console.log('Button state after checkbox click:', JSON.stringify(btnState));
 
-  // Click LOG IN button
-  if (btnEnabled && !btnEnabled.disabled) {
+  // Click the LOG IN button
+  if (btnState && !btnState.disabled) {
     await page.click('button');
   } else {
-    // Force click if still disabled - Angular may have form in different state
-    await page.click('button', { force: true });
+    // If still disabled, try force click and hope for the best
+    await page.evaluate(() => {
+      const btn = document.querySelector('button') as HTMLButtonElement;
+      btn?.click();
+    });
   }
 
   await expect(page).not.toHaveURL(/login/, { timeout: 30000 });

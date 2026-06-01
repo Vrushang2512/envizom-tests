@@ -22,10 +22,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -58,23 +57,19 @@ jobs:
         env:
           GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
         run: |
-          RUN_TIME=$(date '+%Y-%m-%d %H:%M IST' --date='TZ="Asia/Kolkata"' 2>/dev/null || date '+%Y-%m-%d %H:%M UTC')
+          RUN_TIME=$(date '+%Y-%m-%d %H:%M UTC')
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -s -X POST "${GCHAT_WEBHOOK_URL}" \
             -H 'Content-Type: application/json' \
-            -d "{
-              \"text\": \"✅ *Envizom Daily Tests — PASSED*\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n🎥 Videos: Uploaded as artifact `playwright-videos-${{ github.run_id }}`\"
-            }"
+            -d "{\"text\": \"✅ *Envizom Daily Tests — PASSED*\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\"}"
 
       - name: Send Google Chat notification (Fail)
         if: failure()
         env:
           GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
         run: |
-          RUN_TIME=$(date '+%Y-%m-%d %H:%M IST' --date='TZ="Asia/Kolkata"' 2>/dev/null || date '+%Y-%m-%d %H:%M UTC')
+          RUN_TIME=$(date '+%Y-%m-%d %H:%M UTC')
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -s -X POST "${GCHAT_WEBHOOK_URL}" \
             -H 'Content-Type: application/json' \
-            -d "{
-              \"text\": \"❌ *Envizom Daily Tests — FAILED*\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n🎥 Videos: Uploaded as artifact `playwright-videos-${{ github.run_id }}`\\n⚠️ Please check the report for failed tests.\"
-            }"
+            -d "{\"text\": \"❌ *Envizom Daily Tests — FAILED*\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n⚠️ Please check for failed tests.\"}"

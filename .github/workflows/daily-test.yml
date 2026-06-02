@@ -6,10 +6,10 @@ on:
     - cron: '30 2 * * *'
     # 12:00 AM IST (midnight) = 18:30 UTC (previous day)
     - cron: '30 18 * * *'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
-    test-worker-1:
+  test-worker-1:
     name: Run Playwright Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -34,7 +34,7 @@ jobs:
           ENVIZOM_EMAIL: ${{ secrets.ENVIZOM_EMAIL }}
           ENVIZOM_PASSWORD: ${{ secrets.ENVIZOM_PASSWORD }}
           GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
-        run: npx playwright test
+        run: npx playwright test tests/01-login.spec.ts tests/02-dashboard.spec.ts tests/03-alerts.spec.ts tests/04-rules.spec.ts tests/05a-analytics.spec.ts tests/05b-analytics.spec.ts tests/06-reports.spec.ts tests/07-alerts.spec.ts --reporter=html
 
       - name: Upload video recordings
         if: always()
@@ -61,7 +61,7 @@ jobs:
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -s -X POST "${GCHAT_WEBHOOK_URL}" \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \"✅ *Envizom Daily Tests — PASSED*\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\"}"
+            -d "{\"text\": \"✅ Envizom Daily Tests — PASSED\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\"}"
 
       - name: Send Google Chat notification (Fail)
         if: failure()
@@ -72,4 +72,4 @@ jobs:
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -s -X POST "${GCHAT_WEBHOOK_URL}" \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \"❌ *Envizom Daily Tests — FAILED*\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n⚠️ Please check for failed tests.\"}"
+            -d "{\"text\": \"❌ Envizom Daily Tests — FAILED\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n⚠️ Please check for failed tests.\"}"

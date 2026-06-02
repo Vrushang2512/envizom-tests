@@ -4,8 +4,9 @@ const CHART_TYPES = ['Line', 'Bar', 'Scatter', 'Radar', 'Polar', 'Bubble', 'Rose
 
 test.describe('Analytics Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/#/analytics/analytics-list', { waitUntil: 'networkidle', timeout: 30000 });
-    await page.waitForTimeout(3000);
+    await page.goto('/#/analytics/analytics-list', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(5000);
+        await page.waitForSelector('app-root', { timeout: 20000 });
   });
 
   test('AN-01 — Analytics list loads', async ({ page }) => {

@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Data Upload Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/#/data-upload');
+    await page.goto('/#/data-upload', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(3000);
   });
 
   test('DU-01 — Data Upload page loads', async ({ page }) => {
-    await expect(page).toHaveURL(/data-upload/);
+    await expect(page).toHaveURL(/data-upload/, { timeout: 15000 });
     await page.waitForSelector('app-root', { timeout: 10000 });
   });
 

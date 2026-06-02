@@ -1,0 +1,44 @@
+name: Envizom Daily Tests - Worker 2
+
+on:
+  workflow_run:
+      workflows: ["Envizom Daily Tests"]
+          types: [completed]
+
+          jobs:
+            test-worker-2:
+                name: "Worker 2 - Tests 08-15"
+                    runs-on: ubuntu-latest
+                        timeout-minutes: 15
+                            if: ${{ github.event.workflow_run.conclusion != 'cancelled' }}
+                                steps:
+                                      - uses: actions/checkout@v4
+                                            - uses: actions/setup-node@v4
+                                                    with:
+                                                              node-version: '20'
+                                                                    - run: npm ci
+                                                                          - run: npx playwright install --with-deps chromium
+                                                                                - name: Run Worker 2 Tests
+                                                                                        env:
+                                                                                                  ENVIZOM_EMAIL: ${{ secrets.ENVIZOM_EMAIL }}
+                                                                                                            ENVIZOM_PASSWORD: ${{ secrets.ENVIZOM_PASSWORD }}
+                                                                                                                    run: npx playwright test tests/08-notifications.spec.ts tests/09-user-management.spec.ts tests/10-settings.spec.ts tests/11-data-upload.spec.ts tests/12-projects.spec.ts tests/13-billing.spec.ts tests/14-support.spec.ts tests/api/ --reporter=html
+                                                                                                                          - name: Upload Worker 2 Report
+                                                                                                                                  if: always()
+                                                                                                                                          uses: actions/upload-artifact@v4
+                                                                                                                                                  with:
+                                                                                                                                                            name: report-worker2-${{ github.run_id }}
+                                                                                                                                                                      path: playwright-report/
+                                                                                                                                                                                retention-days: 7
+                                                                                                                                                                                      - name: Notify Pass
+                                                                                                                                                                                              if: success()
+                                                                                                                                                                                                      env:
+                                                                                                                                                                                                                GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
+                                                                                                                                                                                                                        run: |
+                                                                                                                                                                                                                                  curl -s -X POST "${GCHAT_WEBHOOK_URL}" -H 'Content-Type: application/json' -d "{\"text\": \"Worker 2 PASSED\"}"
+                                                                                                                                                                                                                                        - name: Notify Fail
+                                                                                                                                                                                                                                                if: failure()
+                                                                                                                                                                                                                                                        env:
+                                                                                                                                                                                                                                                                  GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
+                                                                                                                                                                                                                                                                          run: |
+                                                                                                                                                                                                                                                                                    curl -s -X POST "${GCHAT_WEBHOOK_URL}" -H 'Content-Type: application/json' -d "{\"text\": \"Worker 2 FAILED\"}"

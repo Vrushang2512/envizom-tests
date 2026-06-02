@@ -1,4 +1,4 @@
-himport { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 const CHART_TYPES = ['Line', 'Bar', 'Scatter', 'Radar', 'Polar', 'Bubble', 'Rose', 'Sankey', 'Calendar', 'Heatmap', 'Gauge', 'Pie', 'Custom'];
 

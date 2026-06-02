@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Projects Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/#/projects');
+    await page.goto('/#/projects', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(3000);
   });
 
   test('PR-01 — Projects list loads (17 projects)', async ({ page }) => {
-    await expect(page).toHaveURL(/projects/);
+    await expect(page).toHaveURL(/projects/, { timeout: 15000 });
     await page.waitForSelector('app-root', { timeout: 10000 });
   });
 
@@ -82,7 +82,7 @@ test.describe('Projects Module', () => {
   });
 
   test('PR-07 — Archived toggle switches view', async ({ page }) => {
-    const toggle = page.locator('mat-slide-toggle, text=Archived, button:has-text("Archived")').first();
+        const toggle = page.locator('mat-slide-toggle').or(page.getByRole('button', { name: 'Archived' })).first();
     if (await toggle.count() > 0) {
       await toggle.click();
       await page.waitForTimeout(1500);

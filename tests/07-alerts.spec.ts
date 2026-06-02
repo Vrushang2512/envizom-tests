@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Alerts Module', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/#/alert/alerts-list', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await page.waitForURL(/alert/, { timeout: 20000 });
+      await page.waitForURL(/alert/, { timeout: 20000 });
   });
 
   test('AL-01 — Alerts list loads (1235 alerts exist)', async ({ page }) => {

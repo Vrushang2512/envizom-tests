@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Alerts Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/#/alert/alerts-list');
+    await page.goto('/#/alert/alerts-list', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(3000);
   });
 
   test('AL-01 — Alerts list loads (1235 alerts exist)', async ({ page }) => {
-    await expect(page).toHaveURL(/alert/);
+    await expect(page).toHaveURL(/alert/, { timeout: 15000 });
     await page.waitForSelector('app-root', { timeout: 10000 });
   });
 

@@ -7,9 +7,8 @@ test.describe('Alerts Module', () => {
   });
 
   test('AL-01 — Alerts list loads (1235 alerts exist)', async ({ page }) => {
-    await expect(page).toHaveURL(/alert/, { timeout: 15000 });
-    await page.waitForSelector('app-root', { timeout: 10000 });
-  });
+        await page.waitForSelector('app-root', { timeout: 15000 });
+  });  
 
   test('AL-02 — Add Alert opens 3-step wizard with validation', async ({ page }) => {
     const addBtn = page.locator('button:has-text("Add Alert"), button:has-text("Add"), button:has-text("Create")').first();

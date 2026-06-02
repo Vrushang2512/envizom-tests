@@ -4,19 +4,19 @@ on:
   workflow_run:
     workflows: ["Envizom Daily Tests"]
     types: [completed]
+  workflow_dispatch:
 
 jobs:
   test-worker-2:
     name: "Worker 2 - Tests 08-15"
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ github.event.workflow_run.conclusion != 'cancelled' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          - run: npm install
+      - run: npm install
       - run: npx playwright install --with-deps chromium
       - name: Run Worker 2 Tests
         env:

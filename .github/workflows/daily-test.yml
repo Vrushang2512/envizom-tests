@@ -9,10 +9,10 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  test:
+    test-worker-1:
     name: Run Playwright Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository

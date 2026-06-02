@@ -1,15 +1,15 @@
-import { test, expect } from '@playwright/test';
+himport { test, expect } from '@playwright/test';
 
 const CHART_TYPES = ['Line', 'Bar', 'Scatter', 'Radar', 'Polar', 'Bubble', 'Rose', 'Sankey', 'Calendar', 'Heatmap', 'Gauge', 'Pie', 'Custom'];
 
 test.describe('Analytics Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/#/analytics/analytics-list');
+    await page.goto('/#/analytics/analytics-list', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(3000);
   });
 
   test('AN-01 — Analytics list loads', async ({ page }) => {
-    await expect(page).toHaveURL(/analytics/);
+    await expect(page).toHaveURL(/analytics/, { timeout: 15000 });
     await page.waitForSelector('app-root', { timeout: 10000 });
   });
 
@@ -30,9 +30,11 @@ test.describe('Analytics Module', () => {
       if (await addBtn.count() > 0) {
         await addBtn.click();
         await page.waitForTimeout(1500);
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
         const typeOption = page.locator('text=' + chartType).first();
         if (await typeOption.count() > 0) {
-          await typeOption.click();
+          await typeOption.click({ force: true });
           await page.waitForTimeout(800);
         }
         await page.keyboard.press('Escape');

@@ -10,8 +10,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  timeout: 90_000,              // 90s per test (auth needs up to 60s alone)
-  globalTimeout: 15 * 60 * 1000,
+  timeout: 90_000, // 90s per test (auth needs up to 60s alone)
+  globalTimeout: 23 * 60 * 1000, // 23 minutes (allows for 52 tests with video recording)
 
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
@@ -29,15 +29,15 @@ export default defineConfig({
       size: { width: 1920, height: 1080 },
     },
     trace: 'retain-on-failure',
-    actionTimeout: 30_000,       // 30s for each action (click, fill etc)
-    navigationTimeout: 60_000,   // 60s for navigation
+    actionTimeout: 30_000, // 30s for each action (click, fill etc)
+    navigationTimeout: 60_000, // 60s for navigation
   },
 
   projects: [
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
-      timeout: 120_000,          // 2 minutes for auth setup
+      timeout: 120_000, // 2 minutes for auth setup
       use: {
         storageState: undefined,
         actionTimeout: 30_000,

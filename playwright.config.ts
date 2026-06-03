@@ -21,7 +21,7 @@ export default defineConfig({
 
   use: {
     baseURL: 'https://envizom.oizom.com',
-    headless: true,
+    headless: false,
     viewport: { width: 1920, height: 1080 },
     screenshot: 'only-on-failure',
     video: {

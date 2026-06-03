@@ -57,19 +57,21 @@ jobs:
         env:
           GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
         run: |
-          RUN_TIME=$(date '+%Y-%m-%d %H:%M UTC')
+          RUN_TIME=$(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M IST')
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          VIDEO_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
           curl -s -X POST "${GCHAT_WEBHOOK_URL}" \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \"✅ Envizom Daily Tests — PASSED\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\"}"
+            -d "{\"text\": \"✅ Envizom Daily Tests — PASSED\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n🎬 Videos: ${VIDEO_URL}\"}"
 
       - name: Send Google Chat notification (Fail)
         if: failure()
         env:
           GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
         run: |
-          RUN_TIME=$(date '+%Y-%m-%d %H:%M UTC')
+          RUN_TIME=$(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M IST')
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          VIDEO_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
           curl -s -X POST "${GCHAT_WEBHOOK_URL}" \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \"❌ Envizom Daily Tests — FAILED\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n⚠️ Please check for failed tests.\"}"
+            -d "{\"text\": \"❌ Envizom Daily Tests — FAILED\\n🕐 Run Time: ${RUN_TIME}\\n📊 Report: ${REPORT_URL}\\n🎬 Videos: ${VIDEO_URL}\\n⚠️ Please check for failed tests.\"}"

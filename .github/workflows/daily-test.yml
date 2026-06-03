@@ -34,7 +34,7 @@ jobs:
           ENVIZOM_EMAIL: ${{ secrets.ENVIZOM_EMAIL }}
           ENVIZOM_PASSWORD: ${{ secrets.ENVIZOM_PASSWORD }}
           GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" npx playwright test tests/01-overview.spec.ts tests/02-dashboard.spec.ts tests/03-cluster.spec.ts tests/04-reports.spec.ts tests/05a-analytics.spec.ts tests/05b-analytics.spec.ts tests/06-display.spec.ts tests/07-alerts.spec.ts --reporter=html
+        run: npx playwright test tests/01-overview.spec.ts tests/02-dashboard.spec.ts tests/03-cluster.spec.ts tests/04-reports.spec.ts tests/05a-analytics.spec.ts tests/05b-analytics.spec.ts tests/06-display.spec.ts tests/07-alerts.spec.ts --reporter=html
 
       - name: Upload video recordings
         if: always()

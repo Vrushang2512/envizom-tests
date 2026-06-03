@@ -21,12 +21,12 @@ export default defineConfig({
 
   use: {
     baseURL: 'https://envizom.oizom.com',
-    headless: false,
-    viewport: { width: 1920, height: 1080 },
+    headless: true,
+    viewport: { width: 1280, height: 720 },
     screenshot: 'only-on-failure',
     video: {
       mode: 'on',
-      size: { width: 1920, height: 1080 },
+      size: { width: 1280, height: 720 },
     },
     trace: 'retain-on-failure',
     actionTimeout: 30_000, // 30s for each action (click, fill etc)

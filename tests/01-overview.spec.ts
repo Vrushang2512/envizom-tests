@@ -4,6 +4,9 @@ test.describe('Overview Module', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/#/overview/map');
     await page.waitForTimeout(3000);
+    // Dismiss any open overlay/modal left from a previous test
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
   });
 
   test('OV-01 — Map view loads', async ({ page }) => {
@@ -34,20 +37,26 @@ test.describe('Overview Module', () => {
   });
 
   test('OV-05 — Notifications bell opens panel', async ({ page }) => {
-    const bell = page.locator('[aria-label*="notification" i], mat-icon:has-text("notifications")').first();
+    // Wait for any overlay to clear before interacting with the bell icon
+    await page.waitForSelector('.cdk-overlay-backdrop', { state: 'detached', timeout: 5000 }).catch(() => {});
+    const bell = page.locator('[aria-label*="notification" i], mat-icon:has-text("notifications_active"), mat-icon:has-text("notifications_none"), mat-icon:has-text("notifications")').first();
     if (await bell.count() > 0) {
-      await bell.click();
+      await bell.click({ timeout: 10000 });
       await page.waitForTimeout(1500);
       await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
     }
   });
 
   test('OV-06 — Announcements panel opens', async ({ page }) => {
+    // Wait for any overlay to clear before interacting
+    await page.waitForSelector('.cdk-overlay-backdrop', { state: 'detached', timeout: 5000 }).catch(() => {});
     const ann = page.locator('[class*="announcement"], mat-icon:has-text("campaign")').first();
     if (await ann.count() > 0) {
-      await ann.click();
+      await ann.click({ timeout: 10000 });
       await page.waitForTimeout(1500);
       await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
     }
   });
 

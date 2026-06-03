@@ -22,7 +22,7 @@ jobs:
         env:
           ENVIZOM_EMAIL: ${{ secrets.ENVIZOM_EMAIL }}
           ENVIZOM_PASSWORD: ${{ secrets.ENVIZOM_PASSWORD }}
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" npx playwright test tests/08-heatmap.spec.ts tests/09-complain.spec.ts tests/10-data-validation.spec.ts tests/11-data-upload.spec.ts tests/12-projects.spec.ts tests/13-devices.spec.ts tests/14-user.spec.ts tests/api/ --reporter=html
+        run: npx playwright test tests/08-heatmap.spec.ts tests/09-complain.spec.ts tests/10-data-validation.spec.ts tests/11-data-upload.spec.ts tests/12-projects.spec.ts tests/13-devices.spec.ts tests/14-user.spec.ts tests/api/ --reporter=html
       - name: Upload Worker 2 Videos
         if: always()
         uses: actions/upload-artifact@v4

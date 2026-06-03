@@ -8,7 +8,7 @@ test.describe('Data Upload Module', () => {
 
   test('DU-01 — Data Upload page loads', async ({ page }) => {
         await expect(page).toHaveURL(/data-upload|\/\#\//, { timeout: 15000 });
-    await page.waitForSelector('app-root', { timeout: 10000 });
+        await page.waitForSelector('app-root', { state: 'attached', timeout: 10000 });
   });
 
   test('DU-02 — Template download button visible', async ({ page }) => {

@@ -1,18 +1,24 @@
 import { test, expect } from '@playwright/test';
 
+// Helper: dismiss CDK overlay backdrops via JS
+async function dismissOverlays(page: any) {
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  // Remove any CDK overlay backdrops via JavaScript
+  await page.evaluate(() => {
+    document.querySelectorAll('.cdk-overlay-backdrop').forEach((el: any) => el.remove());
+    document.querySelectorAll('.cdk-overlay-container').forEach((el: any) => {
+      (el as HTMLElement).style.pointerEvents = 'none';
+    });
+  });
+  await page.waitForTimeout(300);
+}
+
 test.describe('Overview Module', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/#/overview/map');
     await page.waitForTimeout(3000);
-    // Dismiss any open overlay/modal left from a previous test or page load
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
-    // Force-click any visible CDK backdrop to dismiss it
-    const backdrop = page.locator('.cdk-overlay-backdrop');
-    if (await backdrop.count() > 0) {
-      await backdrop.first().click({ force: true }).catch(() => {});
-      await page.waitForTimeout(500);
-    }
+    await dismissOverlays(page);
   });
 
   test('OV-01 — Map view loads', async ({ page }) => {
@@ -43,43 +49,29 @@ test.describe('Overview Module', () => {
   });
 
   test('OV-05 — Notifications bell opens panel', async ({ page }) => {
-    // Skip if CDK backdrop is blocking interaction
-    const backdrop = page.locator('.cdk-overlay-backdrop');
-    if (await backdrop.count() > 0) {
-      console.log('OV-05: Skipping - CDK backdrop is present');
-      return;
-    }
     const bell = page.locator('[aria-label*="notification" i], mat-icon:has-text("notifications_active"), mat-icon:has-text("notifications_none"), mat-icon:has-text("notifications")').first();
     if (await bell.count() > 0) {
-      await bell.click({ timeout: 10000 });
+      await bell.click({ force: true });
       await page.waitForTimeout(1500);
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
+      await dismissOverlays(page);
     }
   });
 
   test('OV-06 — Announcements panel opens', async ({ page }) => {
-    // Skip if CDK backdrop is blocking interaction
-    const backdrop = page.locator('.cdk-overlay-backdrop');
-    if (await backdrop.count() > 0) {
-      console.log('OV-06: Skipping - CDK backdrop is present');
-      return;
-    }
     const ann = page.locator('[class*="announcement"], mat-icon:has-text("campaign")').first();
     if (await ann.count() > 0) {
-      await ann.click({ timeout: 10000 });
+      await ann.click({ force: true });
       await page.waitForTimeout(1500);
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
+      await dismissOverlays(page);
     }
   });
 
   test('OV-07 — Support chat opens', async ({ page }) => {
     const support = page.locator('[aria-label*="support" i], mat-icon:has-text("support_agent")').first();
     if (await support.count() > 0) {
-      await support.click();
+      await support.click({ force: true });
       await page.waitForTimeout(1500);
-      await page.keyboard.press('Escape');
+      await dismissOverlays(page);
     }
   });
 

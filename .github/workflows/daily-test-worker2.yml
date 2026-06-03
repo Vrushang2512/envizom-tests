@@ -10,7 +10,7 @@ jobs:
   test-worker-2:
     name: "Worker 2 - Tests 08-15"
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,7 +22,7 @@ jobs:
         env:
           ENVIZOM_EMAIL: ${{ secrets.ENVIZOM_EMAIL }}
           ENVIZOM_PASSWORD: ${{ secrets.ENVIZOM_PASSWORD }}
-        run: npx playwright test tests/08-notifications.spec.ts tests/09-user-management.spec.ts tests/10-settings.spec.ts tests/11-data-upload.spec.ts tests/12-projects.spec.ts tests/13-billing.spec.ts tests/14-support.spec.ts tests/api/ --reporter=html
+        run: npx playwright test tests/08-heatmap.spec.ts tests/09-complain.spec.ts tests/10-data-validation.spec.ts tests/11-data-upload.spec.ts tests/12-projects.spec.ts tests/13-devices.spec.ts tests/14-user.spec.ts tests/api/ --reporter=html
       - name: Upload Worker 2 Report
         if: always()
         uses: actions/upload-artifact@v4

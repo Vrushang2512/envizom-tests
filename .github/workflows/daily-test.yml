@@ -29,6 +29,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
+      - name: Start virtual display (Xvfb)
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1280x720x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
       - name: Run Playwright tests
         env:
           ENVIZOM_EMAIL: ${{ secrets.ENVIZOM_EMAIL }}

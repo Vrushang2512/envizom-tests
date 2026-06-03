@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Projects Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/#/projects', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/#/projects', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(3000);
   });
 

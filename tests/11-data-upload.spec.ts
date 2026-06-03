@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Data Upload Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/#/data-upload', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('/#/data-upload', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(3000);
   });
 

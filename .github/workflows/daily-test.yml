@@ -57,15 +57,18 @@ jobs:
       - name: Build notification message
         if: always()
         id: build_msg
-        env:
-          EXIT_CODE: ${{ steps.run_tests.outputs.exit_code }}
         run: |
-          RUN_TIME=$(TZ="Asia/Kolkata" date "+%Y-%m-%d %H:%M IST")
+          RUN_TIME=$(TZ="Asia/Kolkata" date "+%Y-%m-%d_%H:%M_IST")
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "RUN_TIME=$RUN_TIME" >> $GITHUB_OUTPUT
+          echo "REPORT_URL=$REPORT_URL" >> $GITHUB_OUTPUT
 
-          node -e "
+          if [ ! -f "results.json" ]; then
+            echo "PASSED_COUNT=0" >> $GITHUB_OUTPUT
+            echo "FAILED_COUNT=0" >> $GITHUB_OUTPUT
+          else
+            node -e "
           const fs = require('fs');
-          if (!fs.existsSync('results.json')) { console.log('NO_RESULTS'); process.exit(0); }
           const r = JSON.parse(fs.readFileSync('results.json','utf8'));
           const failed = [];
           const passed = [];
@@ -81,9 +84,9 @@ jobs:
                     passed.push(title);
                   } else {
                     const err = (lastResult.error && lastResult.error.message)
-                      ? lastResult.error.message.replace(/[\r\n]+/g,' ').substring(0,150)
+                      ? lastResult.error.message.replace(/[\r\n]+/g,' ').substring(0,120)
                       : lastResult.status;
-                    failed.push(title + ' :: ' + err);
+                    failed.push(title + ': ' + err);
                   }
                 }
               }
@@ -93,12 +96,11 @@ jobs:
           console.log('PASSED_COUNT=' + passed.length);
           console.log('FAILED_COUNT=' + failed.length);
           if (failed.length > 0) {
-            console.log('FAILED_DETAILS=' + failed.join(' | '));
+            const details = failed.join(' || ').replace(/[^a-zA-Z0-9 :._\-\/\[\]()]/g,'?');
+            console.log('FAILED_DETAILS=' + details);
           }
-          " >> $GITHUB_OUTPUT 2>/dev/null || true
-
-          echo "RUN_TIME=$RUN_TIME" >> $GITHUB_OUTPUT
-          echo "REPORT_URL=$REPORT_URL" >> $GITHUB_OUTPUT
+          " >> $GITHUB_OUTPUT 2>/dev/null
+          fi
 
       - name: Send GChat notification
         if: always()
@@ -112,7 +114,7 @@ jobs:
           FAILED_DETAILS: ${{ steps.build_msg.outputs.FAILED_DETAILS }}
         run: |
           if [ "$EXIT_CODE" != "0" ]; then
-            MSG="FAILED - Envizom Daily Tests (Worker 1) | ${RUN_TIME} | Passed: ${PASSED_COUNT} | Failed: ${FAILED_COUNT} | Failed Tests: ${FAILED_DETAILS} | Report: ${REPORT_URL}"
+            MSG="FAILED - Envizom Daily Tests (Worker 1) | ${RUN_TIME} | Passed: ${PASSED_COUNT} | Failed: ${FAILED_COUNT} | ${FAILED_DETAILS} | Report: ${REPORT_URL}"
           else
             MSG="PASSED - Envizom Daily Tests (Worker 1) | ${RUN_TIME} | All ${PASSED_COUNT} tests passed | Report: ${REPORT_URL}"
           fi

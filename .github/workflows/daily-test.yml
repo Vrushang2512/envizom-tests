@@ -68,16 +68,16 @@ jobs:
           if grep -q "failed" test-output.log 2>/dev/null; then
             TOTAL=$(grep -oE "[0-9]+ failed, [0-9]+ passed" test-output.log | tail -1 || grep -oE "[0-9]+ failed" test-output.log | tail -1 || echo "Tests failed")
             if [ -n "$FAILED_TESTS" ]; then
-              BODY="Failed: ${TOTAL}\n\nFailed tests:\n${FAILED_TESTS}"
+              BODY="Failed: ${TOTAL}. Failed tests: ${FAILED_TESTS}"
             else
               BODY="Failed: ${TOTAL}"
             fi
-            MSG="FAILED - Envizom Daily Tests\n${RUN_TIME}\n${BODY}\n\nReport: ${REPORT_URL}\nVideos: ${VIDEO_URL}"
+            MSG="FAILED - Envizom Daily Tests | ${RUN_TIME} | ${BODY} | Report: ${REPORT_URL}"
           else
             TOTAL=$(grep -oE "[0-9]+ passed" test-output.log | tail -1 || echo "All passed")
-            MSG="PASSED - Envizom Daily Tests\n${RUN_TIME}\n${TOTAL}\n\nReport: ${REPORT_URL}\nVideos: ${VIDEO_URL}"
+            MSG="PASSED - Envizom Daily Tests | ${RUN_TIME} | ${TOTAL} | Report: ${REPORT_URL}"
           fi
-          curl -s -X POST "${GCHAT_WEBHOOK_URL}" -H 'Content-Type: application/json' -d "{\"text\":\"${MSG\"}"
+          curl -s -X POST "${GCHAT_WEBHOOK_URL}" -H "Content-Type: application/json" -d "{\"text\": \"$MSG\"}"
 
       - name: Fail job if tests failed
         if: steps.run_tests.outputs.exit_code != '0'

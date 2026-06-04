@@ -8,16 +8,23 @@ on:
 
 jobs:
   test-worker-2:
-    name: "Worker 2 - Tests 08-15"
+    name: Worker 2 - Tests 08-15
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install
-      - run: npx playwright install --with-deps chromium
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
 
       - name: Run Worker 2 Tests
         id: run_tests
@@ -25,51 +32,109 @@ jobs:
         env:
           ENVIZOM_EMAIL: ${{ secrets.ENVIZOM_EMAIL }}
           ENVIZOM_PASSWORD: ${{ secrets.ENVIZOM_PASSWORD }}
+          GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
         run: |
-          npx playwright test tests/08-heatmap.spec.ts tests/09-complain.spec.ts tests/10-data-validation.spec.ts tests/11-data-upload.spec.ts tests/12-projects.spec.ts tests/13-devices.spec.ts tests/14-user.spec.ts tests/api/ --reporter=html,json 2>&1 | tee test-output.log
+          set -o pipefail
+          npx playwright test tests/08_heatmap.spec.ts tests/09_complain.spec.ts tests/10_datavalidation.spec.ts tests/11_dataupload.spec.ts tests/12_projects.spec.ts tests/13_devices.spec.ts tests/14_user.spec.ts tests/api/15_api.spec.ts --reporter=html,json 2>&1 | tee test-output.log
           echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
-      - name: Upload Worker 2 Videos
+      - name: Upload test videos
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: videos-worker2-${{ github.run_id }}
+          name: test-videos-worker2
           path: test-results/
-          retention-days: 7
+          if-no-files-found: ignore
 
-      - name: Upload Worker 2 Report
+      - name: Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: report-worker2-${{ github.run_id }}
+          name: playwright-report-worker2
           path: playwright-report/
-          retention-days: 7
+          if-no-files-found: ignore
 
-      - name: Parse failed tests and notify
+      - name: Build notification message
+        if: always()
+        id: build_msg
+        env:
+          EXIT_CODE: ${{ steps.run_tests.outputs.exit_code }}
+        run: |
+          RUN_TIME=$(TZ="Asia/Kolkata" date "+%Y-%m-%d %H:%M IST")
+          REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          node -e "
+          const fs = require('fs');
+          if (!fs.existsSync('results.json')) { console.log('NO_RESULTS'); process.exit(0); }
+          const r = JSON.parse(fs.readFileSync('results.json','utf8'));
+          const failed = [];
+          const passed = [];
+          function walk(suites) {
+            for (const s of (suites||[])) {
+              walk(s.suites);
+              for (const spec of (s.specs||[])) {
+                for (const test of (spec.tests||[])) {
+                  const lastResult = (test.results||[]).slice(-1)[0];
+                  if (!lastResult) continue;
+                  const title = spec.title;
+                  if (lastResult.status==='passed') {
+                    passed.push(title);
+                  } else {
+                    const err = (lastResult.error && lastResult.error.message)
+                      ? lastResult.error.message.replace(/[\r\n]+/g,' ').substring(0,150)
+                      : lastResult.status;
+                    failed.push(title + ' :: ' + err);
+                  }
+                }
+              }
+            }
+          }
+          walk(r.suites);
+          console.log('PASSED_COUNT=' + passed.length);
+          console.log('FAILED_COUNT=' + failed.length);
+          if (failed.length > 0) {
+            console.log('FAILED_DETAILS=' + failed.join(' | '));
+          }
+          " >> $GITHUB_OUTPUT 2>/dev/null || true
+
+          echo "RUN_TIME=$RUN_TIME" >> $GITHUB_OUTPUT
+          echo "REPORT_URL=$REPORT_URL" >> $GITHUB_OUTPUT
+
+      - name: Send GChat notification
         if: always()
         env:
           GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
+          EXIT_CODE: ${{ steps.run_tests.outputs.exit_code }}
+          RUN_TIME: ${{ steps.build_msg.outputs.RUN_TIME }}
+          REPORT_URL: ${{ steps.build_msg.outputs.REPORT_URL }}
+          PASSED_COUNT: ${{ steps.build_msg.outputs.PASSED_COUNT }}
+          FAILED_COUNT: ${{ steps.build_msg.outputs.FAILED_COUNT }}
+          FAILED_DETAILS: ${{ steps.build_msg.outputs.FAILED_DETAILS }}
         run: |
-          RUN_TIME=$(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M IST')
-          REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          VIDEO_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
-          FAILED_TESTS=""
-          if [ -f "results.json" ]; then
-            FAILED_TESTS=$(node -e "const r=require('./results.json');const f=[];(r.suites||[]).forEach(s=>{(s.suites||[]).forEach(ss=>{(ss.specs||[]).forEach(sp=>{if(sp.tests&&sp.tests.some(t=>t.results&&t.results.some(r=>r.status==='failed'))){f.push(ss.title+' > '+sp.title)}})})});console.log(f.join('\n'));" 2>/dev/null || echo "")
-          fi
-          if grep -q "failed" test-output.log 2>/dev/null; then
-            TOTAL=$(grep -oE "[0-9]+ failed, [0-9]+ passed" test-output.log | tail -1 || grep -oE "[0-9]+ failed" test-output.log | tail -1 || echo "Tests failed")
-            if [ -n "$FAILED_TESTS" ]; then
-              BODY="Failed: ${TOTAL}. Failed tests: ${FAILED_TESTS}"
-            else
-              BODY="Failed: ${TOTAL}"
-            fi
-            MSG="FAILED - Envizom Worker 2 | ${RUN_TIME} | ${BODY} | Report: ${REPORT_URL}"
+          if [ "$EXIT_CODE" != "0" ]; then
+            MSG="FAILED - Envizom Daily Tests (Worker 2) | ${RUN_TIME} | Passed: ${PASSED_COUNT} | Failed: ${FAILED_COUNT} | Failed Tests: ${FAILED_DETAILS} | Report: ${REPORT_URL}"
           else
-            TOTAL=$(grep -oE "[0-9]+ passed" test-output.log | tail -1 || echo "All passed")
-            MSG="PASSED - Envizom Worker 2 | ${RUN_TIME} | ${TOTAL} | Report: ${REPORT_URL}"
+            MSG="PASSED - Envizom Daily Tests (Worker 2) | ${RUN_TIME} | All ${PASSED_COUNT} tests passed | Report: ${REPORT_URL}"
           fi
-          curl -s -X POST "${GCHAT_WEBHOOK_URL}" -H "Content-Type: application/json" -d "{\"text\": \"$MSG\"}"
+          curl -s -X POST "$GCHAT_WEBHOOK_URL" -H "Content-Type: application/json" -d "{\"text\": \"$MSG\"}"
+
+      - name: Send email on success
+        if: steps.run_tests.outputs.exit_code == '0'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "PASSED - Envizom Daily Tests (Worker 2) - ${{ steps.build_msg.outputs.RUN_TIME }}"
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: Envizom Tests <${{ secrets.SMTP_USER }}>
+          body: |
+            All Envizom Daily Tests (Worker 2) passed successfully.
+
+            Time: ${{ steps.build_msg.outputs.RUN_TIME }}
+            Tests Passed: ${{ steps.build_msg.outputs.PASSED_COUNT }}
+            Report: ${{ steps.build_msg.outputs.REPORT_URL }}
 
       - name: Fail job if tests failed
         if: steps.run_tests.outputs.exit_code != '0'
